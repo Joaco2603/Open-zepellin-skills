@@ -1,0 +1,90 @@
+# OpenZeppelin Smart Contract Rules — Cline / Roo Code / Windsurf
+
+You are an expert Solidity developer. When writing or reviewing smart contracts, apply the following rules from OpenZeppelin v5.x best practices.
+
+## Library & Imports
+- Use OpenZeppelin Contracts **v5.x**. Import from `@openzeppelin/contracts`.
+- For upgradeable: import from `@openzeppelin/contracts-upgradeable`.
+- Always named imports: `import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol"`
+- Import interfaces (`IERC20`, `IERC721`) when only type info or external calls are needed.
+- Pin exact OZ version in `package.json` or `foundry.toml`; never `"latest"`.
+- Import only what is used.
+
+## Access Control
+- `Ownable2Step` (NOT `Ownable`) for any contract managing funds or critical parameters.
+- `AccessControl` for multi-role (MINTER_ROLE, PAUSER_ROLE, UPGRADER_ROLE).
+- Role constants: `bytes32 public constant ROLE_NAME = keccak256("ROLE_NAME")`
+- `DEFAULT_ADMIN_ROLE` → multisig only, never EOA in production.
+- `TimelockController`: 24h min for param changes, 48h for upgrades.
+- Never mix `onlyOwner` and `AccessControl` in the same contract.
+
+## Security Patterns
+- `ReentrancyGuard` + `nonReentrant` on every function that sends ETH or calls external contracts.
+- **CEI**: validate → update state → external call. Always.
+- `Pausable`: `pause()` = PAUSER_ROLE, `unpause()` = DEFAULT_ADMIN_ROLE.
+- No `SafeMath` needed (Solidity 0.8.x built-in). `unchecked {}` only for safe loop counters.
+- Downcasting: `SafeCast.toUint128(value)` — never silent truncation.
+- Signatures: `ECDSA.recover` + `MessageHashUtils.toEthSignedMessageHash`. Use `EIP712`.
+- Per-account nonce mapping for replay protection.
+- Never `tx.origin` auth. Never `block.timestamp` / `blockhash` for randomness.
+- Always `require(addr != address(0))` before using address params.
+
+## ERC-20 Tokens
+- `ERC20` or `ERC20Burnable`. Add `ERC20Permit` (EIP-2612). `ERC20Votes` for governance.
+- `ERC20Capped` for hard supply limits.
+- `_mint` only in constructor or access-controlled functions.
+- Fee-on-transfer: override `_transfer`, fee in basis points, whitelist exempt in mapping.
+
+## ERC-721 / ERC-1155 NFTs
+- Always `_safeMint` (not `_mint`) for ERC-721.
+- `ERC721URIStorage` for per-token URIs. `ERC721Enumerable` only if truly required on-chain.
+- Monotonic `uint256 _nextTokenId`; never reuse token IDs.
+- `ERC2981` for royalties; `_setDefaultRoyalty` in constructor.
+- ERC-1155: `ERC1155Supply`; `_mintBatch` for airdrops.
+- Allowlist: `MerkleProof.verify`.
+
+## Gas Optimization
+- Pack slots: `uint128 + uint128 = 1 SLOAD`.
+- Cache storage reads in local variables when read more than once.
+- `calldata` over `memory` for external params.
+- `external` over `public` when not called internally.
+- `++i` not `i++`; `unchecked { ++i; }` for safe counters.
+- Cache `arr.length` before loops.
+- Custom errors over `require` strings (50–70% gas saving on reverts).
+
+## Storage, Events & Errors
+- `immutable` for constructor-set values. `constant` for compile-time values.
+- Max 3 `indexed` params per event (EVM limit); index addresses and IDs.
+- Past-tense event names: `TokenMinted`, `RewardClaimed`, `RoleRevoked`.
+- Full NatSpec: `@notice`, `@param`, `@return`, `@dev`, `@custom:security-contact`.
+- Never store large strings on-chain; store IPFS CID or `keccak256` hash.
+
+## Upgradeable Proxies
+- `UUPSUpgradeable` + `_authorizeUpgrade` with `onlyOwner` or governance.
+- No state in constructor declarations; use `initialize()` + `initializer` modifier.
+- Call all `__Parent_init()` in correct order.
+- `_disableInitializers()` in logic contract constructor.
+- Never reorder/retype storage between upgrades. Append only.
+- `uint256[50] private __gap` in every upgradeable base contract.
+- `storageLayout diff` before every upgrade.
+
+## DeFi Patterns
+- `ERC4626` for vaults; override `_decimalsOffset()` to mitigate inflation attacks.
+- Staking: Synthetix per-token accumulator; `updateReward(account)` before stake/unstake.
+- Chainlink: `require(answer > 0)`, check `updatedAt` staleness, use `latestRoundData()`.
+- Never single oracle for liquidations.
+
+## Testing (Foundry)
+- Inherit `Test` from `forge-std/Test.sol`. Naming: `test_<Function>_<scenario>`.
+- `vm.prank` for single call; `vm.startPrank/stopPrank` for sequences.
+- `vm.expectRevert(CustomError.selector)` before reverting calls.
+- Fuzz: `vm.assume`, `bound(x, min, max)`. ≥10k runs on critical math.
+- Fork: `vm.rollFork(blockNumber)` for deterministic CI.
+- Invariant tests (`invariant_` prefix). Min 90% coverage.
+
+## Deployment
+- Fork-simulate before broadcast. Env vars for private keys only.
+- `deployments/<network>.json` for addresses + args + block numbers.
+- `slither` + `mythril` on final bytecode.
+- Transfer to Gnosis Safe multisig as final deployment step.
+- Verify on Etherscan with exact compiler version and optimizer settings.

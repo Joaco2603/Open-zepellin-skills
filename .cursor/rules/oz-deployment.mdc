@@ -1,0 +1,40 @@
+---
+description: Deployment scripts and checklist for Hardhat and Foundry
+globs: ["**/scripts/**", "**/deploy/**", "**/*.s.sol"]
+alwaysApply: false
+---
+
+# Deployment
+
+## Foundry Scripts
+- Inherit `Script` from `forge-std/Script.sol`.
+- Wrap logic between `vm.startBroadcast(deployerKey)` and `vm.stopBroadcast()`.
+- Use `run()` as entry point; return deployed addresses for composability.
+- Save output with `vm.writeJson` to `deployments/` keyed by chain ID.
+- Simulate with `forge script --fork-url <rpc>` before `--broadcast --verify`.
+
+## Hardhat Scripts
+- Use Hardhat Ignition modules or scripts in `scripts/deploy/` — one file per contract group.
+- `getNamedAccounts()` in Hardhat Deploy to avoid hardcoded addresses across networks.
+- Verify immediately with `hardhat verify` or the Ignition plugin after deployment.
+- Save all deployment addresses, constructor args, and block numbers in `deployments/<network>.json`.
+- Never deploy to mainnet without fork simulation first.
+
+## Network Configuration
+- Define all network configs (RPC URLs, chain IDs, verifier URLs) in `hardhat.config.ts` or `foundry.toml`.
+- Load private keys exclusively from environment variables; **never** commit secrets.
+- Use `.env.example` with placeholder values to document required variables.
+- Set `gasMultiplier: 1.2` to avoid underpriced txs during congestion.
+
+## Security Checklist Before Mainnet
+- Run `slither` and `mythril` static analysis on final bytecode.
+- Confirm all constructor arguments via post-deployment getter calls.
+- Verify source on Etherscan/Sourcify with exact compiler version, optimizer settings, and license.
+- Record tx hash, block number, and deployer address for every step in the audit trail.
+- Announce a 24h deployment freeze (no code changes) before mainnet launch.
+
+## Post-Deployment
+- Transfer ownership to a **Gnosis Safe multisig** as the **final step** — never as an afterthought.
+- Require at least 2-of-3 for parameter changes; 3-of-5 for upgrades and fund withdrawals.
+- Test the full ownership-transfer flow on testnet with the same Safe config before mainnet.
+- Verify the Safe address on-chain before transferring; never trust an address from chat or email.

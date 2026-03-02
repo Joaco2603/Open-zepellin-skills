@@ -1,0 +1,37 @@
+---
+description: ERC-20, ERC-721, ERC-1155 token implementation rules using OpenZeppelin
+globs: ["**/*.sol"]
+alwaysApply: false
+---
+
+# Token Standards
+
+## ERC-20
+- Inherit `ERC20` or `ERC20Burnable` depending on whether supply needs to decrease.
+- Add `ERC20Permit` for gasless approvals via off-chain signatures (EIP-2612).
+- Use `ERC20Votes` when the token needs governance voting power tracking.
+- Use `ERC20Capped` to enforce a hard maximum supply at contract level.
+- `_mint` only in constructor or access-controlled functions — never in unrestricted public functions.
+- Override `decimals()` → `6` for stablecoins; leave default `18` for governance/utility tokens.
+
+## ERC-20 Fee-on-Transfer
+- Override `_transfer` to deduct fees; **never** modify `balanceOf` directly.
+- Store fee in basis points: `uint256 public feeBps` (e.g., `100 = 1%`).
+- Calculate: `fee = (amount * feeBps) / 10_000` — always `uint256` to avoid overflow.
+- Whitelist fee-exempt addresses (routers, treasury) in a `mapping(address => bool)`, not hardcoded.
+- Emit `FeeCollected(from, to, feeAmount)` on every deduction.
+
+## ERC-721 NFTs
+- Always use `_safeMint` (not `_mint`) to prevent tokens locked in non-receiver contracts.
+- Use `ERC721URIStorage` for per-token metadata URI.
+- Use `ERC721Enumerable` only if on-chain owner enumeration is strictly required (adds significant gas).
+- Token IDs: monotonically increasing `uint256 private _nextTokenId`; **never reuse** IDs.
+- Inherit `ERC2981` for royalties; `_setDefaultRoyalty(receiver, feeNumerator)` in constructor.
+- Gate public minting: price check + supply cap in the same `require` block.
+- Use `MerkleProof.verify` for allowlist minting; track per-wallet mint count in a mapping.
+
+## ERC-1155 Multi-Token
+- Use `ERC1155Supply` to track `totalSupply` per `tokenId` without manual counters.
+- Batch mint with `_mintBatch` for airdrops — saves gas over individual `_mint` calls.
+- Define tokenId semantics as `constants` or an `enum` for self-documenting code.
+- Override `uri()` to return base URI with `{id}` placeholder per ERC-1155 metadata spec.

@@ -1,0 +1,41 @@
+---
+description: Security patterns for Solidity smart contracts — reentrancy, pausable, signatures, access
+globs: ["**/*.sol"]
+alwaysApply: true
+---
+
+# Security Patterns
+
+## Reentrancy
+- Inherit `ReentrancyGuard`; apply `nonReentrant` to every function that transfers ETH or calls external contracts.
+- Follow **Checks-Effects-Interactions (CEI)**: validate inputs → update state → make external call.
+- Never call an external contract before updating internal accounting (balances, shares, etc.).
+- In upgradeable contracts: use `ReentrancyGuardUpgradeable`, call `__ReentrancyGuard_init()` in initializer.
+
+## Pausable Emergency Stop
+- Inherit `Pausable`; apply `whenNotPaused` to all state-changing user-facing functions.
+- `pause()` → restricted to `PAUSER_ROLE`; `unpause()` → restricted to `DEFAULT_ADMIN_ROLE`.
+- Emit a custom `EmergencyTriggered(reason, caller)` event alongside the built-in `Paused` event.
+- Never leave a contract permanently paused without a governance path to unpause or upgrade.
+
+## Signature Verification
+- Use `ECDSA.recover(hash, signature)` — never compare raw signatures.
+- Always hash with `MessageHashUtils.toEthSignedMessageHash(hash)` for personal_sign compatibility.
+- For structured data: use `EIP712` base contract; never build domain separators manually.
+- Protect against replay with a per-account `mapping(address => uint256) public nonces`.
+- Validate that recovered address `!= address(0)` before using it.
+
+## Common Vulnerability Avoidance
+- **Never** use `tx.origin` for authentication; always use `msg.sender`.
+- **Never** use `block.timestamp` or `blockhash` as randomness source; use Chainlink VRF.
+- **Always** validate `require(addr != address(0))` before using address parameters.
+- Solidity 0.8.x has built-in overflow checks; do **not** import `SafeMath`.
+- Use `unchecked {}` only for loop counters where overflow is mathematically impossible.
+- Downcast safely: `SafeCast.toUint128(value)` — never silent truncation.
+- Use `Math.mulDiv(a, b, denominator)` for precision-safe fixed-point multiplication.
+
+## Merkle Proof Allowlists
+- `MerkleProof.verify(proof, root, leaf)` — store only the root on-chain.
+- Leaf: `keccak256(abi.encodePacked(account, amount))` — double-hash to prevent preimage attacks.
+- Track claimed leaves with `mapping(bytes32 => bool)` keyed on the leaf hash.
+- Update root via `onlyOwner` setter; emit `MerkleRootUpdated(oldRoot, newRoot, caller)`.

@@ -1,0 +1,38 @@
+---
+description: Upgradeable proxy patterns — UUPS, Transparent, Beacon, initializers, storage layout
+globs: ["**/*.sol", "**/scripts/**", "**/deploy/**"]
+alwaysApply: false
+---
+
+# Upgradeable Proxies
+
+## UUPS Pattern
+- Inherit `UUPSUpgradeable`; override `_authorizeUpgrade` with `onlyOwner` or governance check.
+- Store implementation address in EIP-1967 slot; never use a custom slot.
+- Run OZ Upgrades plugin validation (`npx hardhat check`) before every upgrade deployment.
+
+## Transparent Proxy Pattern
+- Use `TransparentUpgradeableProxy` when admin calls must be strictly separated from user calls.
+- Deploy `ProxyAdmin` separately; transfer its ownership to a multisig immediately after deployment.
+- Never call implementation functions from the proxy admin address (selector clash risk).
+- Upgrade via `ProxyAdmin.upgrade(proxy, newImpl)`, never by calling the proxy directly as admin.
+
+## Initializer Pattern
+- Mark initializer with `initializer` modifier from `Initializable`.
+- Call parent `__init()` functions in correct order: `__Ownable_init` before `__ERC20_init`, etc.
+- Use `reinitializer(N)` for upgrade-time initializations — not `initializer`.
+- Add `_disableInitializers()` in the logic contract constructor to prevent direct initialization.
+- **Never** set state in constructor variable declarations for upgradeable contracts; use `initialize()`.
+
+## Storage Layout Rules
+- **Never** change the order or type of existing storage variables between upgrades.
+- **Only** append new variables at the **end** of the layout — never insert in the middle.
+- Add `uint256[50] private __gap` at the end of each upgradeable base contract.
+- Run `storageLayout diff` with the OZ Upgrades Hardhat plugin before every upgrade.
+- Document each storage slot with a comment including the version it was introduced.
+
+## Beacon Proxy (Multi-Instance)
+- Use `BeaconProxy` when many instances need simultaneous upgrades.
+- Deploy `UpgradeableBeacon`; transfer ownership to a governance contract, not an EOA.
+- Create instances with `new BeaconProxy(beacon, initData)` in a factory contract.
+- Upgrade all instances at once: `UpgradeableBeacon.upgradeTo(newImpl)` from the owner.

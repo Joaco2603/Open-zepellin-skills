@@ -1,0 +1,34 @@
+---
+description: Access control rules — Ownable2Step, AccessControl, roles, timelocks
+globs: ["**/*.sol"]
+alwaysApply: true
+---
+
+# Access Control
+
+## Ownable
+- Use `Ownable2Step` (NOT `Ownable`) for any contract managing funds or critical parameters.
+- Never call `renounceOwnership()` on contracts that would become permanently unmanageable.
+- Protect all admin setters (`setFee`, `setOracle`, `pause`) with `onlyOwner`.
+- In upgradeable contracts: use `OwnableUpgradeable`, call `__Ownable_init(initialOwner)` in initializer.
+
+## Role-Based Access
+- Use `AccessControl` when multiple distinct roles are needed.
+- Define role constants as: `bytes32 public constant ROLE_NAME = keccak256("ROLE_NAME")`
+- `DEFAULT_ADMIN_ROLE` → always granted to a multisig, **never** to an EOA in production.
+- Use `_checkRole(role)` helper (OZ v5+) in custom modifiers; it reverts with `AccessControlUnauthorizedAccount`.
+- **Never** mix `onlyOwner` and `AccessControl` in the same contract; choose one model consistently.
+- Revoke roles explicitly when decommissioning an address; don't rely on contract destruction.
+
+## Timelocks
+- Wrap `AccessControl` with `TimelockController` for governance-critical parameter changes.
+- Minimum delay: **24h** for parameter changes, **48h** for upgrades.
+- `PROPOSER_ROLE` → governance contract or multisig only; never to automated bots alone.
+- `EXECUTOR_ROLE` → `address(0)` to allow public execution after delay expiry.
+- Always `schedule`, not `execute` directly, to preserve timelock guarantees.
+
+## Multi-Role Guards
+- Create custom modifiers per role rather than repeating `hasRole` checks inline.
+- For two-role operations: `require(hasRole(ROLE_A, msg.sender) || hasRole(ROLE_B, msg.sender))`
+- Document each role's purpose and trust level in NatSpec `@dev` comments.
+- Use `AccessControlEnumerable` if on-chain role member listing is needed.

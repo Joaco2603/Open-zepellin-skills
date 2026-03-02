@@ -1,0 +1,32 @@
+---
+description: Core OpenZeppelin setup, imports, and library selection rules for all Solidity files
+globs: ["**/*.sol"]
+alwaysApply: true
+---
+
+# OpenZeppelin Core Rules
+
+## Library Version & Imports
+- Use OpenZeppelin Contracts **v5.x**. Import from `@openzeppelin/contracts`.
+- For upgradeable variants, import from `@openzeppelin/contracts-upgradeable`.
+- Always use **named imports**: `import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol"`
+- Import interfaces (`IERC20`, `IERC721`) when only type information or external calls are needed.
+- Pin the exact OZ version in `package.json` or `foundry.toml`; never use `"latest"`.
+- Import only what is used; unused imports increase compilation time and bytecode size.
+
+## Contract Selection Guide
+- Single-owner admin: `Ownable2Step` (NOT `Ownable`)
+- Multi-role admin: `AccessControl` or `AccessControlEnumerable`
+- ERC-20 fungible tokens: `ERC20`, `ERC20Burnable`, `ERC20Permit`, `ERC20Votes`, `ERC20Capped`
+- ERC-721 NFTs: `ERC721URIStorage` (per-token URI) or `ERC721Enumerable` (on-chain enumeration)
+- ERC-1155 multi-token: `ERC1155Supply`
+- Yield vaults: `ERC4626`
+- On-chain governance: `Governor` + `GovernorTimelockControl` + `GovernorVotes`
+- Upgradeable (UUPS): `UUPSUpgradeable`
+- Upgradeable (transparent): `TransparentUpgradeableProxy` + `ProxyAdmin`
+
+## OZ v5 Hook Changes
+- ERC-20 v5: `_beforeTokenTransfer` removed → use `_update(from, to, value)` hook instead.
+- ERC-721 v5: `_beforeTokenTransfer` / `_afterTokenTransfer` removed → use `_update(to, tokenId, auth)`.
+- `Ownable` v5: constructor requires `initialOwner`; `address(0)` reverts.
+- `AccessControl` v5: `_checkRole()` reverts with `AccessControlUnauthorizedAccount(account, role)`.

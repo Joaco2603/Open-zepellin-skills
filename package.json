@@ -1,0 +1,40 @@
+{
+  "name": "oz-skills",
+  "version": "1.0.0",
+  "description": "OpenZeppelin v5.x smart contract rules for AI coding assistants — Copilot, Cursor, Claude, Cline, Windsurf",
+  "keywords": [
+    "openzeppelin",
+    "solidity",
+    "smart-contracts",
+    "ethereum",
+    "foundry",
+    "hardhat",
+    "ai",
+    "copilot",
+    "cursor",
+    "claude",
+    "cline",
+    "windsurf"
+  ],
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "oz-skills": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    ".github/copilot-instructions.md",
+    ".cursorrules",
+    ".cursor/",
+    "CLAUDE.md",
+    ".clinerules",
+    "resources/"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/grantfox/openzepellin-skills.git"
+  }
+}

@@ -1,0 +1,36 @@
+---
+description: Gas optimization rules for Solidity smart contracts
+globs: ["**/*.sol"]
+alwaysApply: true
+---
+
+# Gas Optimization
+
+## Storage
+- Pack related variables into one 32-byte slot: `uint128 + uint128 = 1 SLOAD` vs 2 separate SLOADs.
+- Cache storage reads in local variables when read more than once in a function.
+- Avoid storage writes inside loops; accumulate in a memory variable and write once after.
+- Use `bytes32` instead of `string` for fixed-length identifiers.
+- `delete mapping[key]` to receive gas refund when values are no longer needed.
+
+## Function Parameters & Visibility
+- `calldata` instead of `memory` for external function parameters that are not modified.
+- `external` instead of `public` for functions never called internally (~5–10 gas per call).
+- `view` or `pure` on functions that don't modify state (allows free off-chain calls).
+- `payable` on functions expected to receive ETH; non-payable reverts automatically on receipt.
+
+## Loops
+- Cache array length: `uint256 len = arr.length` before the loop.
+- `++i` not `i++`; `unchecked { ++i; }` for counters that cannot realistically overflow.
+- Prefer `mapping` lookups over array iteration for O(1) membership checks.
+- Break early from loops when the result is found.
+
+## Errors & Events
+- Custom errors (`error InsufficientBalance(uint256 available, uint256 required)`) → 50–70% savings vs `require` strings.
+- Use events for off-chain data; don't store analytics history in mappings.
+- Emit identifiers in events and let indexers query full data, rather than emitting large blobs.
+
+## Constants & Immutables
+- `immutable` for constructor-set values (zero SLOAD cost, stored in bytecode).
+- `constant` for compile-time known values (inlined at compile time, zero gas).
+- Split large contracts into a main contract + library to stay under the 24KB bytecode limit.

@@ -1,0 +1,38 @@
+---
+description: Testing rules for Solidity — Foundry and Hardhat patterns, fuzz, fork, invariant tests
+globs: ["**/*.t.sol", "**/test/**", "**/tests/**", "**/*.test.ts", "**/*.spec.ts"]
+alwaysApply: false
+---
+
+# Testing
+
+## Foundry Unit Tests
+- Inherit `Test` from `forge-std/Test.sol`; never write raw assembly test harnesses.
+- Name: `test_<FunctionName>_<scenario>` (e.g., `test_Mint_RevertsWhenPaused`).
+- `vm.prank(address)` for single call; `vm.startPrank/stopPrank` for multi-call sequences.
+- `vm.expectRevert(CustomError.selector)` before the reverting call.
+- Assert with `assertEq`, `assertGt`, `assertApproxEqRel` — not `assertTrue(a == b)`.
+
+## Foundry Fuzz Tests
+- Mark as `testFuzz_<Name>(uint256 amount)` — Foundry auto-generates inputs.
+- `vm.assume(condition)` to filter invalid inputs.
+- `bound(amount, min, max)` to keep values in realistic ranges.
+- Run ≥ 10,000 fuzz iterations (`FOUNDRY_FUZZ_RUNS=10000`) for security-critical arithmetic.
+
+## Foundry Fork Tests
+- `vm.createSelectFork(rpcUrl, blockNumber)` for mainnet fork tests.
+- `vm.rollFork(blockNumber)` to pin block for deterministic CI results.
+- `deal(token, address, amount)` to seed ERC-20 balances without whale addresses.
+- Separate fork tests in `test/fork/` — gate with `FORK_TEST=true` env flag in CI.
+
+## Hardhat Tests
+- `loadFixture` from `@nomicfoundation/hardhat-toolbox` for state reset between tests.
+- `expect(tx).to.emit(contract, "EventName").withArgs(...)` for event assertions.
+- `anyValue` from `@nomicfoundation/hardhat-chai-matchers` for event args not needing precision.
+- `hardhat_mine` to advance multiple blocks for time-dependent logic.
+
+## Invariant & Integration Tests
+- `invariant_` prefix for stateful fuzz tests (Foundry).
+- Define invariants: `totalSupply == sum of all balances`, `totalAssets >= totalShares * pricePerShare`.
+- `targetContract(address)` + `targetSelector` to scope fuzzer callable functions.
+- Enforce minimum **90% line coverage** with `forge coverage --report lcov`.
